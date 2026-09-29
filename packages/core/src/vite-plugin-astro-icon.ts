@@ -1,5 +1,6 @@
 import type { AstroConfig, AstroIntegrationLogger } from "astro";
 import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { parse, resolve } from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { Plugin } from "vite";
@@ -51,10 +52,14 @@ export function createPlugin(
       }
     },
     configureServer({ watcher, moduleGraph }) {
-      watcher.add(resolve(root.pathname, iconDir));
+      // Astro exposes `root` as a file URL. `URL.pathname` is `/C:/...` on
+      // Windows, so passing it to `path.resolve` creates an invalid path with
+      // a duplicated drive prefix. `fileURLToPath` applies the host platform's
+      // drive-letter and separator rules before the path API is used.
+      const resolvedIconDir = resolve(fileURLToPath(root), iconDir);
+      watcher.add(resolvedIconDir);
       watcher.on("all", async (_, filepath: string) => {
         const parsedPath = parse(filepath);
-        const resolvedIconDir = resolve(root.pathname, iconDir);
         const isSvgFileInIconDir =
           parsedPath.dir.startsWith(resolvedIconDir) &&
           parsedPath.ext === ".svg";
