@@ -1,7 +1,7 @@
 import type { AstroConfig, AstroIntegrationLogger } from "astro";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { parse, resolve } from "node:path";
+import { isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { Plugin } from "vite";
 import type {
@@ -60,8 +60,12 @@ export function createPlugin(
       watcher.add(resolvedIconDir);
       watcher.on("all", async (_, filepath: string) => {
         const parsedPath = parse(filepath);
+        const relativeIconDir = relative(resolvedIconDir, parsedPath.dir);
         const isSvgFileInIconDir =
-          parsedPath.dir.startsWith(resolvedIconDir) &&
+          (relativeIconDir === "" ||
+            (!relativeIconDir.startsWith(`..${sep}`) &&
+              relativeIconDir !== ".." &&
+              !isAbsolute(relativeIconDir))) &&
           parsedPath.ext === ".svg";
         const isAstroConfig = parsedPath.name === "astro.config";
         if (!isSvgFileInIconDir && !isAstroConfig) return;
